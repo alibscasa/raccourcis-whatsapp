@@ -26,10 +26,15 @@ Retirer une personne désactive son icône.
 | `COUNTRY_PREFIX` | Indicatif des numéros saisis en 06… (défaut `212`). |
 | `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS` | À renseigner avec un domaine personnalisé. |
 
-## Mise en ligne (Railway ou Render)
+## Mise en ligne
 
-Créer un service à partir de ce dépôt, lui ajouter une base Postgres, saisir les variables ci-dessus.
-Le `Procfile` applique les migrations puis démarre gunicorn.
+**Render, en un clic** : ouvrir
+https://render.com/deploy?repo=https://github.com/alibscasa/raccourcis-whatsapp
+puis saisir `APP_PASSWORD`, `GREENAPI_INSTANCE` et `GREENAPI_TOKEN`. Le fichier `render.yaml`
+crée le service, génère `SECRET_KEY` et range les données dans un fichier SQLite sur disque persistant.
+
+**Railway** : créer un service à partir de ce dépôt, lui ajouter une base Postgres et saisir les
+variables ci-dessus. Le `Procfile` applique les migrations puis démarre gunicorn.
 
 ## En local
 

@@ -1,0 +1,32 @@
+# Mise en ligne en un clic sur Render :
+#   https://render.com/deploy?repo=https://github.com/alibscasa/raccourcis-whatsapp
+# Render crée le service, génère SECRET_KEY et demande les trois valeurs « sync: false ».
+# La liste des personnes et leurs photos vivent dans un fichier SQLite sur le disque
+# persistant : pas de base de données séparée à créer.
+services:
+  - type: web
+    name: raccourcis-whatsapp
+    runtime: python
+    region: frankfurt
+    plan: starter              # toujours allumé : une icône doit répondre tout de suite
+    branch: main
+    healthCheckPath: /healthz/
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python manage.py migrate --noinput && gunicorn config.wsgi --bind 0.0.0.0:$PORT"
+    disk:
+      name: donnees
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: DATABASE_URL
+        value: "sqlite:////var/data/raccourcis.sqlite3"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: APP_PASSWORD        # mot de passe de l'écran de gestion
+        sync: false
+      - key: GREENAPI_INSTANCE
+        sync: false
+      - key: GREENAPI_TOKEN
+        sync: false

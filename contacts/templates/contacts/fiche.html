@@ -1,0 +1,28 @@
+{% extends "contacts/base.html" %}
+{% block heading %}{% if c.pk %}Modifier{% else %}Nouvelle personne{% endif %}{% endblock %}
+{% block header_action %}<a href="{% url 'liste' %}">Annuler</a>{% endblock %}
+{% block content %}
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  <label for="name">Nom</label>
+  <input type="text" id="name" name="name" value="{{ c.name }}" maxlength="60" required autocomplete="off">
+  <div class="hint">C’est le texte affiché sous l’icône. Court de préférence.</div>
+
+  <label for="phone">Numéro WhatsApp</label>
+  <input type="tel" id="phone" name="phone" value="{% if c.pk and not error %}+{% endif %}{{ c.phone }}" required
+         placeholder="06 61 23 45 67" autocomplete="off">
+  <div class="hint">Format national (06…) ou international (+33…).</div>
+
+  <label for="action">Quand on touche l’icône</label>
+  <select id="action" name="action">
+    {% for code, label in actions %}<option value="{{ code }}" {% if c.action == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+
+  <label for="photo">Photo <span style="font-weight:400">(facultatif)</span></label>
+  <input type="file" id="photo" name="photo" accept="image/*">
+  <div class="hint">Sans fichier, la photo de profil WhatsApp de la personne est utilisée.</div>
+
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <p style="margin-top:22px"><button class="btn primary block">Enregistrer</button></p>
+</form>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "contacts/base.html" %}
+{% block header_action %}
+<form method="post" action="{% url 'deconnexion' %}">{% csrf_token %}<button>Sortir</button></form>
+{% endblock %}
+{% block css %}
+  .person { background: var(--card); border-radius: 14px; padding: 14px; margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .who { display: flex; align-items: center; gap: 14px; }
+  .who img { width: 64px; height: 64px; border-radius: 50%; flex: none; background: var(--line); }
+  .who .name { font-weight: 650; font-size: 1.05rem; overflow-wrap: anywhere; }
+  .who .sub { color: var(--muted); font-size: .9rem; }
+  .acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .acts form { display: contents; }
+  .acts .btn { flex: 1 1 auto; font-size: .92rem; padding: 0 12px; }
+  .acts .btn.primary { flex-basis: 100%; }
+  .empty { text-align: center; color: var(--muted); padding: 32px 8px; }
+{% endblock %}
+{% block content %}
+<p><a class="btn primary block" href="{% url 'nouvelle' %}">＋ Ajouter une personne</a></p>
+
+{% for c in contacts %}
+<div class="person">
+  <div class="who">
+    <img src="{% url 'icone' c.token 192 %}?v={{ c.version }}" alt="">
+    <div>
+      <div class="name">{{ c.name }}</div>
+      <div class="sub">{{ c.pretty_phone }} · {{ c.get_action_display }}</div>
+      {% if not c.photo %}<div class="sub">Pas de photo : initiales affichées</div>{% endif %}
+    </div>
+  </div>
+  <div class="acts">
+    <a class="btn primary" href="{% url 'appel' c.token %}?installer=1">Mettre l’icône sur ce téléphone</a>
+    <button class="btn" type="button" data-share="{% url 'appel' c.token %}?installer=1" data-name="{{ c.name }}">Envoyer le lien</button>
+    <a class="btn" href="{% url 'fiche' c.pk %}">Modifier</a>
+    <form method="post" action="{% url 'relire_photo' c.pk %}">{% csrf_token %}
+      <button class="btn">Photo WhatsApp ↻</button></form>
+    <form method="post" action="{% url 'supprimer' c.pk %}"
+          onsubmit="return confirm('Retirer {{ c.name|escapejs }} ? Son icône ne fonctionnera plus.')">{% csrf_token %}
+      <button class="btn danger">Retirer</button></form>
+  </div>
+</div>
+{% empty %}
+<p class="empty">Personne pour l’instant.<br>Ajoutez un nom et un numéro : la photo de profil WhatsApp est récupérée toute seule.</p>
+{% endfor %}
+{% endblock %}
+{% block js %}
+<script>
+// « Envoyer le lien » : pour installer l'icône sur le téléphone de quelqu'un d'autre.
+document.querySelectorAll('[data-share]').forEach(function (b) {
+  b.addEventListener('click', async function () {
+    var url = location.origin + b.dataset.share;
+    try {
+      if (navigator.share) { await navigator.share({title: 'Appeler ' + b.dataset.name, url: url}); return; }
+      await navigator.clipboard.writeText(url);
+      b.textContent = 'Lien copié ✓';
+    } catch (e) { if (e.name !== 'AbortError') prompt('Lien à copier :', url); }
+  });
+});
+</script>
+{% endblock %}

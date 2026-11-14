@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>{{ c.first_name }}</title>
+<meta name="apple-mobile-web-app-title" content="{{ c.first_name }}">
+<meta name="theme-color" content="#128c7e">
+<link rel="manifest" href="{% url 'manifest' c.token %}">
+<link rel="apple-touch-icon" href="{% url 'icone' c.token 180 %}?v={{ c.version }}">
+<link rel="icon" type="image/png" href="{% url 'icone' c.token 192 %}?v={{ c.version }}">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; min-height: 100dvh; background: #128c7e; color: #fff;
+         font: 17px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+         display: flex; flex-direction: column; align-items: center;
+         padding: calc(28px + env(safe-area-inset-top, 0px)) 20px calc(24px + env(safe-area-inset-bottom, 0px)); }
+  .photo { width: min(62vw, 260px); aspect-ratio: 1; border-radius: 50%; display: block;
+           border: 5px solid rgba(255,255,255,.9); box-shadow: 0 10px 30px rgba(0,0,0,.25); background: #0d6b60; }
+  h1 { font-size: 1.7rem; margin: 18px 0 2px; text-align: center; overflow-wrap: anywhere; }
+  .num { opacity: .85; margin: 0 0 22px; }
+  a.main { display: flex; align-items: center; justify-content: center; width: 100%; max-width: 360px;
+           min-height: 64px; border-radius: 32px; background: #fff; color: #0b5d54;
+           font-size: 1.25rem; font-weight: 700; text-decoration: none; box-shadow: 0 6px 18px rgba(0,0,0,.2); }
+  .others { display: flex; gap: 10px; width: 100%; max-width: 360px; margin-top: 12px; }
+  .others a { flex: 1; min-height: 48px; display: flex; align-items: center; justify-content: center;
+              text-align: center; border-radius: 24px; border: 1.5px solid rgba(255,255,255,.75);
+              color: #fff; text-decoration: none; font-weight: 600; font-size: .95rem; padding: 4px 10px; }
+  .setup { background: #fff; color: #17212b; border-radius: 16px; padding: 16px 18px; margin-top: 26px;
+           width: 100%; max-width: 360px; }
+  .setup h2 { font-size: 1.05rem; margin: 0 0 8px; }
+  .setup ol { margin: 0; padding-left: 22px; }
+  .setup li { margin: 6px 0; }
+  .setup p { margin: 10px 0 0; color: #667781; font-size: .9rem; }
+</style>
+</head>
+<body>
+<a href="{{ c.action_url }}" aria-label="{{ c.get_action_display }} : {{ c.name }}">
+  <img class="photo" src="{% url 'icone' c.token 512 %}?v={{ c.version }}" alt="">
+</a>
+<h1>{{ c.name }}</h1>
+<p class="num">{{ c.pretty_phone }}</p>
+<a class="main" id="go" href="{{ c.action_url }}">{{ c.get_action_display }}</a>
+<div class="others">
+  {% for label, url in c.other_actions %}<a href="{{ url }}">{{ label }}</a>{% endfor %}
+</div>
+
+{% if setup %}
+<div class="setup">
+  <h2>Mettre {{ c.first_name }} sur l’écran d’accueil</h2>
+  <ol data-os="ios" hidden>
+    <li>Ouvrez cette page dans <b>Safari</b>.</li>
+    <li>Touchez <b>Partager</b> (le carré avec une flèche vers le haut).</li>
+    <li>Choisissez <b>Sur l’écran d’accueil</b>, puis <b>Ajouter</b>.</li>
+  </ol>
+  <ol data-os="android" hidden>
+    <li>Ouvrez cette page dans <b>Chrome</b>.</li>
+    <li>Touchez le menu <b>⋮</b> en haut à droite.</li>
+    <li>Choisissez <b>Ajouter à l’écran d’accueil</b> (ou <b>Installer l’application</b>).</li>
+  </ol>
+  <ol data-os="other" hidden>
+    <li>Ouvrez cette page sur le téléphone.</li>
+    <li>Dans le menu du navigateur, choisissez <b>Ajouter à l’écran d’accueil</b>.</li>
+  </ol>
+  <p>L’icône portera la photo et le prénom. Un appui dessus lance : « {{ c.get_action_display }} ».</p>
+</div>
+{% endif %}
+
+<script>
+(function () {
+  var SETUP = {{ setup|yesno:"true,false" }};
+  if (SETUP) {
+    // L'adresse enregistrée par l'écran d'accueil doit être celle qui lance l'appel.
+    history.replaceState(null, '', location.pathname);
+    var ua = navigator.userAgent;
+    var os = /iPhone|iPad|iPod/.test(ua) ? 'ios' : /Android/.test(ua) ? 'android' : 'other';
+    document.querySelector('[data-os="' + os + '"]').hidden = false;
+    return;
+  }
+  // Ouverture depuis l'icône : on lance l'action tout de suite. Si le téléphone
+  // la retient, le gros bouton reste là pour la lancer d'un appui.
+  window.addEventListener('pageshow', function (e) {
+    if (e.persisted) return;
+    setTimeout(function () { location.href = document.getElementById('go').href; }, 250);
+  });
+})();
+</script>
+</body>
+</html>

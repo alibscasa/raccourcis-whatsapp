@@ -1,0 +1,10 @@
+{% extends "contacts/base.html" %}
+{% block content %}
+<form method="post">
+  {% csrf_token %}
+  <label for="password">Mot de passe</label>
+  <input type="password" id="password" name="password" autocomplete="current-password" autofocus required>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <p style="margin-top:20px"><button class="btn primary block">Entrer</button></p>
+</form>
+{% endblock %}

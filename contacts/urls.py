@@ -3,7 +3,11 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('', views.liste, name='liste'),
+    path('', views.accueil, name='accueil'),
+    path('gerer/', views.liste, name='liste'),
+    path('choisir/', views.choisir, name='choisir'),
+    path('manifest.json', views.app_manifest, name='app_manifest'),
+    path('icon-<int:size>.png', views.app_icon, name='app_icon'),
     path('healthz/', views.healthz),
     path('connexion/', views.connexion, name='connexion'),
     path('deconnexion/', views.deconnexion, name='deconnexion'),

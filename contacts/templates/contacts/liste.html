@@ -1,7 +1,6 @@
 {% extends "contacts/base.html" %}
-{% block header_action %}
-<form method="post" action="{% url 'deconnexion' %}">{% csrf_token %}<button>Sortir</button></form>
-{% endblock %}
+{% block heading %}Gérer les personnes{% endblock %}
+{% block header_action %}<a href="{% url 'accueil' %}">Terminé</a>{% endblock %}
 {% block css %}
   .person { background: var(--card); border-radius: 14px; padding: 14px; margin-bottom: 12px;
             box-shadow: 0 1px 3px rgba(0,0,0,.06); }
@@ -16,7 +15,8 @@
   .empty { text-align: center; color: var(--muted); padding: 32px 8px; }
 {% endblock %}
 {% block content %}
-<p><a class="btn primary block" href="{% url 'nouvelle' %}">＋ Ajouter une personne</a></p>
+<p><a class="btn primary block" href="{% url 'choisir' %}">＋ Choisir dans mes contacts WhatsApp</a></p>
+<p><a class="btn block" href="{% url 'nouvelle' %}">Saisir un numéro à la main</a></p>
 
 {% for c in contacts %}
 <div class="person">
@@ -29,7 +29,7 @@
     </div>
   </div>
   <div class="acts">
-    <a class="btn primary" href="{% url 'appel' c.token %}?installer=1">Mettre l’icône sur ce téléphone</a>
+    <a class="btn" style="flex-basis:100%" href="{% url 'appel' c.token %}?installer=1">Icône à part sur l’écran d’accueil</a>
     <button class="btn" type="button" data-share="{% url 'appel' c.token %}?installer=1" data-name="{{ c.name }}">Envoyer le lien</button>
     <a class="btn" href="{% url 'fiche' c.pk %}">Modifier</a>
     <form method="post" action="{% url 'relire_photo' c.pk %}">{% csrf_token %}
@@ -40,8 +40,10 @@
   </div>
 </div>
 {% empty %}
-<p class="empty">Personne pour l’instant.<br>Ajoutez un nom et un numéro : la photo de profil WhatsApp est récupérée toute seule.</p>
+<p class="empty">Personne pour l’instant.<br>Choisissez-les dans vos contacts WhatsApp : la photo de profil est récupérée toute seule.</p>
 {% endfor %}
+<form method="post" action="{% url 'deconnexion' %}" style="margin-top:28px;text-align:center">{% csrf_token %}
+  <button class="btn">Se déconnecter</button></form>
 {% endblock %}
 {% block js %}
 <script>

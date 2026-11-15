@@ -4,13 +4,15 @@ Une icône par personne sur l'écran d'accueil du téléphone, avec sa photo : u
 
 ## Comment ça marche
 
-1. Dans l'écran de gestion (protégé par mot de passe), on ajoute un nom et un numéro.
-   La photo de profil WhatsApp est lue via Green API (`getAvatar`) ; on peut aussi importer une photo.
-2. « Mettre l'icône sur ce téléphone » ouvre la page de la personne, avec la marche à suivre
-   (Safari → Partager → Sur l'écran d'accueil ; Chrome → ⋮ → Ajouter à l'écran d'accueil).
-   « Envoyer le lien » sert à installer l'icône sur un autre téléphone.
-3. Un appui sur l'icône ouvre la page et lance l'action choisie :
-   appel WhatsApp (`wa.me/call/<numéro>`), discussion WhatsApp ou appel téléphonique.
+Tout se fait depuis le téléphone, derrière un mot de passe unique.
+
+1. **Choisir les personnes** : « Gérer » → « Choisir dans mes contacts WhatsApp » liste les contacts du
+   compte relié à Green API (`getContacts`) ; on coche, la photo de profil de chacun est lue (`getAvatar`).
+   On peut aussi saisir un numéro à la main et importer une photo.
+2. **Appeler** : la page d'accueil est une grille de photos ; un appui sur une photo lance l'action de la
+   personne : appel WhatsApp (`wa.me/call/<numéro>`), discussion WhatsApp ou appel téléphonique.
+3. **Sur l'écran d'accueil du téléphone** : ajouter la page d'accueil (une seule icône « Appels »), ou
+   une icône à part par personne (« Gérer » → « Icône à part sur l'écran d'accueil »).
 
 Les pages d'appel (`/a/<jeton>/`) s'ouvrent sans mot de passe : c'est le jeton, impossible à deviner, qui protège.
 Retirer une personne désactive son icône.

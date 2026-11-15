@@ -1,0 +1,31 @@
+{% extends "contacts/base.html" %}
+{% block heading %}Appels{% endblock %}
+{% block header_action %}<a href="{% url 'liste' %}">Gérer</a>{% endblock %}
+{% block css %}
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px; }
+  .tile { display: block; text-decoration: none; color: var(--ink); text-align: center;
+          -webkit-tap-highlight-color: transparent; }
+  .tile img { width: 100%; aspect-ratio: 1; border-radius: 22px; display: block; background: var(--line);
+              box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+  .tile:active img { transform: scale(.96); }
+  .tile span { display: block; margin-top: 6px; font-weight: 650; overflow-wrap: anywhere; }
+  .empty { text-align: center; color: var(--muted); padding: 32px 8px; }
+  .tip { color: var(--muted); font-size: .88rem; text-align: center; margin-top: 26px; }
+{% endblock %}
+{% block content %}
+{% if contacts %}
+<div class="grid">
+  {% for c in contacts %}
+  <a class="tile" href="{{ c.action_url }}" aria-label="{{ c.get_action_display }} : {{ c.name }}">
+    <img src="{% url 'icone' c.token 512 %}?v={{ c.version }}" alt="" loading="lazy">
+    <span>{{ c.name }}</span>
+  </a>
+  {% endfor %}
+</div>
+<p class="tip">Un appui sur une photo lance l’appel.<br>Pour garder cette page sous la main : menu du navigateur → « Ajouter à l’écran d’accueil ».</p>
+{% else %}
+<p class="empty">Personne pour l’instant.</p>
+<p><a class="btn primary block" href="{% url 'choisir' %}">Choisir dans mes contacts WhatsApp</a></p>
+<p><a class="btn block" href="{% url 'nouvelle' %}">Saisir un numéro à la main</a></p>
+{% endif %}
+{% endblock %}

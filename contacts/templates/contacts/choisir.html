@@ -1,0 +1,66 @@
+{% extends "contacts/base.html" %}
+{% block heading %}Mes contacts WhatsApp{% endblock %}
+{% block header_action %}<a href="{% url 'liste' %}">Annuler</a>{% endblock %}
+{% block css %}
+  #q { position: sticky; top: 8px; z-index: 2; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+  .rows { background: var(--card); border-radius: 14px; margin: 12px 0 90px; overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; min-height: 56px;
+         border-bottom: 1px solid var(--line); margin: 0; font-weight: 400; cursor: pointer; }
+  .row:last-child { border-bottom: 0; }
+  .row input { width: 24px; height: 24px; flex: none; accent-color: var(--green); }
+  .row .n { font-weight: 600; overflow-wrap: anywhere; }
+  .row .p { color: var(--muted); font-size: .88rem; }
+  .row.done { color: var(--muted); cursor: default; }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+         background: var(--bg); border-top: 1px solid var(--line); }
+  .bar .btn { max-width: 608px; margin: 0 auto; }
+  .bar .btn[disabled] { opacity: .5; }
+{% endblock %}
+{% block content %}
+{% if error %}
+<p class="error">{{ error }}</p>
+<p><a class="btn block" href="?actualiser=1">Réessayer</a></p>
+<p><a class="btn block" href="{% url 'nouvelle' %}">Saisir un numéro à la main</a></p>
+{% elif not people %}
+<p class="hint">Aucun contact renvoyé par WhatsApp.</p>
+<p><a class="btn block" href="{% url 'nouvelle' %}">Saisir un numéro à la main</a></p>
+{% else %}
+<input type="text" id="q" placeholder="Chercher un nom ou un numéro" autocomplete="off">
+<form method="post" id="f">
+  {% csrf_token %}
+  <div class="rows">
+    {% for p in people %}
+    <label class="row{% if p.added %} done{% endif %}" data-k="{{ p.name|lower }} {{ p.phone }}">
+      <input type="checkbox" name="phone" value="{{ p.phone }}" {% if p.added %}checked disabled{% endif %}>
+      <span><span class="n">{{ p.name }}</span>{% if p.named %}<br><span class="p">+{{ p.phone }}</span>{% endif %}{% if p.added %}<br><span class="p">Déjà dans la liste</span>{% endif %}</span>
+    </label>
+    {% endfor %}
+  </div>
+  <div class="bar"><button class="btn primary block" id="go" disabled>Cochez des personnes</button></div>
+</form>
+<p class="hint" style="text-align:center;margin-top:-70px;padding-bottom:90px"><a href="?actualiser=1">Relire mes contacts WhatsApp</a></p>
+{% endif %}
+{% endblock %}
+{% block js %}
+<script>
+(function () {
+  var f = document.getElementById('f'); if (!f) return;
+  var go = document.getElementById('go'), rows = [].slice.call(document.querySelectorAll('.row'));
+  function norm(s) { return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
+  rows.forEach(function (r) { r.dataset.k = norm(r.dataset.k); });
+  document.getElementById('q').addEventListener('input', function () {
+    var q = norm(this.value.trim()), digits = q.replace(/\D/g, '');
+    rows.forEach(function (r) {
+      r.hidden = !!q && r.dataset.k.indexOf(q) < 0 && !(digits.length > 2 && r.dataset.k.indexOf(digits.replace(/^0/, '')) >= 0);
+    });
+  });
+  function count() {
+    var n = f.querySelectorAll('input[name=phone]:checked:not(:disabled)').length;
+    go.disabled = !n;
+    go.textContent = n ? 'Ajouter ' + n + (n > 1 ? ' personnes' : ' personne') : 'Cochez des personnes';
+  }
+  f.addEventListener('change', count);
+  f.addEventListener('submit', function () { go.disabled = true; go.textContent = 'Lecture des photos…'; });
+})();
+</script>
+{% endblock %}

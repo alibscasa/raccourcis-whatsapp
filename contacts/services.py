@@ -80,10 +80,8 @@ def fetch_whatsapp_avatar(phone):
     """Photo de profil WhatsApp via Green API. Renvoie (octets JPEG | None, message)."""
     if not (settings.GREENAPI_INSTANCE and settings.GREENAPI_TOKEN):
         return None, 'Green API n’est pas configuré (GREENAPI_INSTANCE / GREENAPI_TOKEN).'
-    url = (f'{settings.GREENAPI_URL}/waInstance{settings.GREENAPI_INSTANCE}'
-           f'/getAvatar/{settings.GREENAPI_TOKEN}')
     try:
-        resp = requests.post(url, json={'chatId': f'{phone}@c.us'}, timeout=10)
+        resp = requests.post(_greenapi('getAvatar'), json={'chatId': f'{phone}@c.us'}, timeout=10)
     except requests.RequestException as e:
         return None, f'Green API injoignable ({e.__class__.__name__}).'
     if resp.status_code != 200:
@@ -101,3 +99,58 @@ def fetch_whatsapp_avatar(phone):
         return square_jpeg(img.content), ''
     except Exception as e:  # réseau ou image illisible
         return None, f'Photo WhatsApp illisible ({e.__class__.__name__}).'
+
+
+def _greenapi(method):
+    return (f'{settings.GREENAPI_URL}/waInstance{settings.GREENAPI_INSTANCE}'
+            f'/{method}/{settings.GREENAPI_TOKEN}')
+
+
+def fetch_whatsapp_contacts():
+    """Contacts du compte WhatsApp relié à Green API (« getContacts »).
+
+    Renvoie ([{'phone', 'name'}, …] triés par nom, message d'erreur éventuel).
+    Les groupes sont écartés ; un contact sans nom porte son numéro.
+    """
+    if not (settings.GREENAPI_INSTANCE and settings.GREENAPI_TOKEN):
+        return [], 'Green API n’est pas configuré (GREENAPI_INSTANCE / GREENAPI_TOKEN).'
+    try:
+        resp = requests.get(_greenapi('getContacts'), timeout=20)
+    except requests.RequestException as e:
+        return [], f'Green API injoignable ({e.__class__.__name__}).'
+    if resp.status_code != 200:
+        return [], f'Green API a répondu {resp.status_code}.'
+    try:
+        rows = resp.json()
+    except ValueError:
+        rows = None
+    if not isinstance(rows, list):
+        return [], 'Réponse Green API illisible.'
+    people = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        chat_id = str(row.get('id') or '')
+        if not chat_id.endswith('@c.us'):
+            continue
+        phone = chat_id[:-5]
+        if not (phone.isdigit() and 8 <= len(phone) <= 15):
+            continue
+        name = str(row.get('contactName') or row.get('name') or '').strip()
+        people[phone] = {'phone': phone, 'name': name[:60] or f'+{phone}', 'named': bool(name)}
+    ordered = sorted(people.values(), key=lambda c: (not c['named'], c['name'].casefold()))
+    return ordered, ''
+
+
+def app_icon_png(size):
+    """Icône de l'appli elle-même : combiné blanc sur fond vert."""
+    img = Image.new('RGB', (size, size), '#128c7e')
+    draw = ImageDraw.Draw(img)
+    u = size / 100
+    draw.ellipse((22 * u, 22 * u, 78 * u, 78 * u), fill='#ffffff')
+    draw.ellipse((30 * u, 30 * u, 70 * u, 70 * u), fill='#128c7e')
+    draw.polygon([(22 * u, 78 * u), (27 * u, 60 * u), (40 * u, 73 * u)], fill='#ffffff')
+    draw.ellipse((42 * u, 42 * u, 58 * u, 58 * u), fill='#ffffff')
+    out = io.BytesIO()
+    img.save(out, 'PNG', optimize=True)
+    return out.getvalue()

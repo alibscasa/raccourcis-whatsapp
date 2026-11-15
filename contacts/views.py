@@ -14,6 +14,7 @@ from .models import Contact
 
 MAX_UPLOAD = 8 * 1024 * 1024
 MAX_TRIES, LOCK_SECONDS = 8, 15 * 60
+MAX_PICK = 15  # personnes ajoutées par envoi (une lecture de photo chacune)
 
 
 def healthz(request):
@@ -33,7 +34,7 @@ def gestion(view):
 
 def connexion(request):
     if request.session.get('gestion'):
-        return redirect('liste')
+        return redirect('accueil')
     error = ''
     if not settings.APP_PASSWORD:
         error = 'Le mot de passe n’est pas configuré (variable APP_PASSWORD).'
@@ -46,7 +47,7 @@ def connexion(request):
             cache.delete(key)
             request.session.cycle_key()
             request.session['gestion'] = True
-            return redirect('liste')
+            return redirect('accueil')
         else:
             cache.set(key, cache.get(key, 0) + 1, LOCK_SECONDS)
             error = 'Mot de passe incorrect.'
@@ -62,8 +63,67 @@ def deconnexion(request):
 # ─── Gestion des personnes ────────────────────────────────────────
 
 @gestion
+def accueil(request):
+    """La grille : une photo par personne, un appui lance l'appel."""
+    return render(request, 'contacts/accueil.html', {'contacts': Contact.objects.all()})
+
+
+@gestion
 def liste(request):
     return render(request, 'contacts/liste.html', {'contacts': Contact.objects.all()})
+
+
+@gestion
+def choisir(request):
+    """Cocher des personnes parmi les contacts WhatsApp du compte Green API."""
+    people = cache.get('wa_contacts')
+    error = ''
+    if people is None or request.GET.get('actualiser'):
+        people, error = services.fetch_whatsapp_contacts()
+        if not error:
+            cache.set('wa_contacts', people, 10 * 60)
+    by_phone = {p['phone']: p for p in people}
+
+    if request.method == 'POST':
+        phones = [p for p in request.POST.getlist('phone') if p in by_phone]
+        existing = set(Contact.objects.values_list('phone', flat=True))
+        todo = [p for p in phones if p not in existing]
+        added = 0
+        for phone in todo[:MAX_PICK]:
+            jpeg, _ = services.fetch_whatsapp_avatar(phone)
+            Contact.objects.create(name=by_phone[phone]['name'], phone=phone, photo=jpeg,
+                                   photo_source='whatsapp' if jpeg else '')
+            added += 1
+        if added:
+            messages.success(request, f'{added} personne(s) ajoutée(s).')
+        if len(todo) > MAX_PICK:
+            messages.warning(request, f'{MAX_PICK} personnes à la fois : recommencez pour les suivantes.')
+        return redirect('accueil' if added else 'choisir')
+
+    existing = set(Contact.objects.values_list('phone', flat=True))
+    return render(request, 'contacts/choisir.html', {
+        'people': [dict(p, added=p['phone'] in existing) for p in people], 'error': error})
+
+
+def app_manifest(request):
+    ua = request.META.get('HTTP_USER_AGENT', '')
+    ios = any(k in ua for k in ('iPhone', 'iPad', 'iPod'))
+    return JsonResponse({
+        'id': '/', 'name': 'Appels WhatsApp', 'short_name': 'Appels', 'start_url': '/', 'scope': '/',
+        # iOS : « browser » garde l'ouverture dans Safari, qui sait passer la main à WhatsApp.
+        'display': 'browser' if ios else 'standalone',
+        'background_color': '#128c7e', 'theme_color': '#128c7e', 'lang': 'fr',
+        'icons': [{'src': f'/icon-{size}.png', 'sizes': f'{size}x{size}', 'type': 'image/png',
+                   'purpose': purpose} for size in (192, 512) for purpose in ('any', 'maskable')],
+    }, content_type='application/manifest+json')
+
+
+def app_icon(request, size):
+    if size not in services.ICON_SIZES:
+        raise Http404
+    response = HttpResponse(services.app_icon_png(size), content_type='image/png')
+    response['Cache-Control'] = 'public, max-age=86400'
+    return response
 
 
 @gestion

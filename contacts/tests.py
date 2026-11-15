@@ -48,7 +48,7 @@ class AppTests(TestCase):
                 mock.patch('contacts.services.requests.get', return_value=img):
             r = self.client.post('/personne/nouvelle/', {'name': 'Hind B', 'phone': '06 61 23 45 67',
                                                          'action': 'call'})
-        self.assertRedirects(r, '/')
+        self.assertRedirects(r, '/gerer/')
         self.assertEqual(post.call_args.kwargs['json'], {'chatId': '212661234567@c.us'})
         c = Contact.objects.get()
         self.assertEqual((c.phone, c.photo_source), ('212661234567', 'whatsapp'))
@@ -99,6 +99,43 @@ class AppTests(TestCase):
         self.assertEqual(Image.open(io.BytesIO(icon.content)).size, (192, 192))
         self.assertEqual(self.client.get(f'/a/{c.token}/icon-999.png').status_code, 404)
         self.assertEqual(self.client.get('/a/inconnu/').status_code, 404)
+
+    def test_grid_links_call_directly(self):
+        self.assertRedirects(self.client.get('/gerer/'), '/connexion/')
+        self.assertRedirects(self.client.get('/choisir/'), '/connexion/')
+        self.login()
+        Contact.objects.create(name='Hind', phone='212661234567')
+        Contact.objects.create(name='Ali', phone='212677889900', action='tel')
+        r = self.client.get('/')
+        self.assertContains(r, 'href="https://wa.me/call/212661234567"')
+        self.assertContains(r, 'href="tel:+212677889900"')
+        self.assertEqual(json.loads(self.client.get('/manifest.json').content)['start_url'], '/')
+        icon = self.client.get('/icon-192.png')
+        self.assertEqual(Image.open(io.BytesIO(icon.content)).size, (192, 192))
+
+    def test_pick_from_whatsapp_contacts(self):
+        from django.core.cache import cache
+        cache.clear()
+        self.login()
+        Contact.objects.create(name='Déjà', phone='212600000001')
+        rows = [{'id': '212600000001@c.us', 'name': 'Deja', 'type': 'user'},
+                {'id': '212600000002@c.us', 'name': 'zoe', 'contactName': 'Zoé', 'type': 'user'},
+                {'id': '212600000003@c.us', 'name': '', 'type': 'user'},
+                {'id': '120363000000000000@g.us', 'name': 'Groupe', 'type': 'group'}]
+        api = mock.Mock(status_code=200, json=lambda: rows)
+        no_avatar = mock.Mock(status_code=200, json=lambda: {'urlAvatar': ''})
+        with mock.patch('contacts.services.requests.get', return_value=api) as get, \
+                mock.patch('contacts.services.requests.post', return_value=no_avatar):
+            r = self.client.get('/choisir/')
+            self.assertContains(r, 'Zoé')
+            self.assertContains(r, 'Déjà dans la liste')
+            self.assertNotContains(r, 'Groupe')
+            # numéro hors de la liste WhatsApp : ignoré ; déjà présent : pas de doublon
+            r = self.client.post('/choisir/', {'phone': ['212600000002', '212600000001', '212699999999']})
+            self.assertEqual(get.call_count, 1)  # liste gardée en cache entre l'affichage et l'envoi
+        self.assertRedirects(r, '/')
+        self.assertEqual(sorted(Contact.objects.values_list('phone', 'name')),
+                         [('212600000001', 'Déjà'), ('212600000002', 'Zoé')])
 
     def test_delete(self):
         self.login()
